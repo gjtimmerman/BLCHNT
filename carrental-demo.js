@@ -29,14 +29,11 @@ function solcCompile(sources) {
 }
 
 async function deploy(compiledContract, gas) {
-//      console.log(JSON.stringify(compiledContract.evm.bytecode.object));
-        let contract = new web3.eth.Contract(compiledContract.abi); //,"0x04CED8C5DcD78645ca8080811E5bb9964488Eb3A");
+        let contract = new web3.eth.Contract(compiledContract.abi);
         console.log("Created contract");
-//        await contract.methods.destructContract().send({from: from, gas: 2000000});
         let deployedContract = await contract.deploy({data: '0x' + compiledContract.evm.bytecode.object  }).send({ from: from, gas: gas});
         console.log("Deployed contract");
         return deployedContract;
-//        return contract;
 }
 
 async function compileContracts(paths) {
@@ -82,38 +79,37 @@ async function compileAndDeployContracts(name)
 {
   console.log('Compiling...');
   let contracts = await compileContracts(name);
-/*  console.log('Deploying DateTime...');
+  console.log('Deploying DateTime...');
   let contract1 = await deploy(contracts[name[1]]['DateTime'], 2000000);
+//  let contract1 = new web3.eth.Contract(contracts[name[1]]['DateTime'].abi,"0xD2546F62659f3E6531305D3Fc7A0C04B3e593f27")
   console.log(contract1.options.address);
   let bcode = await link.linkBytecode(contracts[name[0]]['CarRental'].evm.bytecode.object,{'DateTime.sol': {'DateTime': contract1.options.address}});
-//  console.log(bcode);
   contracts[name[0]]['CarRental'].evm.bytecode.object = bcode;
   console.log('Deploying CarRental...');
+//        await contracts[name[0]]['CarRental'].methods.destructContract().send({from: from, gas: 2000000});
   let contract2 = await deploy(contracts[name[0]]['CarRental'], 2000000);
   console.log('CarRental contract at', contract2.options.address);
-  */
-  let contract2 = new web3.eth.Contract(contracts[name[0]]['CarRental'].abi,"0xA4faCe72200D2b350eC802e503d23EF9C6b38f45");
+
+//  let contract2 = new web3.eth.Contract(contracts[name[0]]['CarRental'].abi,"0x49B2ff68Be53fb3FA670C637e6DC6DD266Fa42d9");
   contract2.handleRevert = true;
   contract2.events.RentalAccepted(printRentalAcceptedEvent);
 
   try {
-//    await  contract2.methods.addCar(strToBytes("AB12CD"),1000,strToBytes("Toyota")).send({from: from, gas: 2000000});
-    await contract2.methods.rentCar(strToBytes("AB12CD"),2020,1,10,2020,2,5).send({from: from, value:1000, gas: 2000000});
+    await  contract2.methods.addCar(web3.utils.fromAscii("AB13CD"),1000,web3.utils.fromAscii("Toyota")).send({from: from, gas: 2000000});
+    await contract2.methods.rentCar(web3.utils.fromAscii("AB13CD"),2020,1,10,2020,2,5).send({from: from, value:1000, gas: 2000000});
     let numCars = await contract2.methods.getNumCars().call();
     console.log("number of cars: " + numCars);
   } catch (e) {
+      console.log("Error occurred")
       console.log(e.name);
+      console.log(e.lineNumber);
+      console.log(e.stack);
       console.log(e.message);
       console.log(e.reason);
   } finally {
 
   }
-/*  await contract.methods.SayHello().send({from: from, gas: 2000000});
-  let tx = await p1;
-  console.log(JSON.stringify(tx));
-  let mtx = await getMinedTransaction(tx);
-  console.log(mtx);
-*/
+
 }
 
 let solc = require('solc');
