@@ -12,51 +12,56 @@ function callbackForPromise(resolve,reject) {
     };
 }
 
-async function delay(delayInMs)
-{
-  return new Promise(resolve => setTimeout(resolve,delayInMs));
-}
-
-async function getTransaction(txid) {
+function getTransaction(txid) {
     return  new Promise((resolve,reject) =>
           web3.eth.getTransaction(txid, callbackForPromise(resolve,reject)))
     }
 
-async function getMinedTransaction(txid) {
-    let tx = await getTransaction(txid);
-
-    if (tx.blockNumber) {
+function getMinedTransaction(txid) {
+    return getTransaction(txid).then(function (tx) {
+        if (tx.blockNumber) {
             return tx;
-    } else {
-      await delay(1000);
-      return getMinedTransaction(txid);
-    }
+        } else {
+            let p1 = new Promise(function(resolve){
+              setTimeout(resolve,1000);
+            });
+            return p1.then(function () {
+                return getMinedTransaction(txid);
+            });
+        }
+    });
 }
 
+function readPath(basePath, path) {
+    var fullPath = basePath + (path ? '/' + path : '');
 
-async function readPath(basePath, path) {
-    let fullPath = basePath + (path ? '/' + path : '');
-    let stats = await new Promise((resolve, reject) =>
-      fs.stat(fullPath,callbackForPromise(resolve,reject)));
-    if (stats.isFile()) {
-            let contents = await new Promise((resolve,reject) =>
-              fs.readFile(fullPath, 'utf-8', callbackForPromise(resolve,reject)))
-            return [{
+    return new Promise((resolve, reject) =>
+       fs.stat(fullPath,callbackForPromise(resolve,reject)))
+        .then(function (stats) {
+        if (stats.isFile()) {
+            return new Promise((resolve,reject) =>
+                fs.readFile(fullPath, 'utf-8', callbackForPromise(resolve,reject)))
+                  .then(function (contents) {
+                return [{
                     key : path ? path : basePath ? basePath : '',
                     value: contents
                 }];
-
+            });
         } else if (stats.isDirectory()) {
-            let files = await new Promise((resolve,reject) =>
-              fs.readdir(fullPath, callbackForPromise(resolve,reject)))
-            let promises = files.filter(function (file) {
+            return new Promise((resolve,reject) =>
+                fs.readDir(fullPath, callbackForPromise(resolve,reject)))
+                  .then(function (files) {
+                var promises = files.filter(function (file) {
                     return !file.startsWith('.');
                 }).map(function (file) {
                     return readPath(basePath, path ? path + '/' + file : file);
-                  });
-            let results = await Promise.all(promises);
-            return [].concat.apply([], results);
+                });
+                return Promise.all(promises).then(function (results) {
+                    return [].concat.apply([], results);
+                });
+            });
         }
+    });
 }
 
 function kv2object(kv) {
@@ -69,31 +74,44 @@ function kv2object(kv) {
 
 function solcCompile(sources) {
     input = { language: 'Solidity', sources: {},settings: {}};
-    sources.map( source => {
-      input.sources[source.key] = {};
-      input.sources[source.key]['content']=source.value;
-      input.settings['outputSelection']={}
-      input.settings['outputSelection']['*'] = {};
-      input.settings['outputSelection']['*']['*'] = {};
-      input.settings['outputSelection']['*']['*'] = ['*'];
-    });
+    input.sources[sources[0].key] = {};
+    input.sources[sources[0].key]['content']=sources[0].value;
+    input.settings['outputSelection']={}
+    input.settings['outputSelection']['*'] = {};
+    input.settings['outputSelection']['*']['*'] = {};
+    input.settings['outputSelection']['*']['*'] = ['*'];
     contr = JSON.parse(solc.compile(JSON.stringify(input)));
     return contr.contracts;
 }
 
-async function compileContracts(path) {
-    let sources = await readPath(path);
-    return solcCompile(sources);
+function compileContracts(path) {
+    return readPath(path).then(solcCompile);
 }
 
-async function deploy(compiledContract, gas) {
-//      console.log(JSON.stringify(compiledContract.evm.bytecode));
-        let contract = new web3.eth.Contract(compiledContract.abi); //,"0x96005c03f23dea07410a2c0a9ce7a61be9129213");
-        let deployedContract = await contract.deploy({data: '0x' + compiledContract.evm.bytecode.object  }).send({ from: from, gas: gas});
+function deployer(web3, from) {
+    return function deploy(compiledContract, gas) {
+      console.log(JSON.stringify(compiledContract.evm.bytecode));
+        var contract = new web3.eth.Contract(compiledContract.abi); //,"0x96005c03f23dea07410a2c0a9ce7a61be9129213");
+        let p1 = new Promise(function(resolve,reject)
+        	{
+            contract.deploy({data: '0x' + compiledContract.evm.bytecode.object  }).send({ from: from, gas: gas})
+            .then(function(deployedContract)
+            {
+                 if (deployedContract.options.address) {
+                     resolve(deployedContract);
+                 } else {
+                     resolve(deployedContract);
+                 }
 
-        return deployedContract;
+            })
+
+        .catch(function (error) {
+            reject(error);
+        });
+      });
+      return p1;
+    }
 }
-
 
 function bytes32tostring(bytes32) {
     if (bytes32.substring(0, 2) != '0x') {
@@ -109,38 +127,54 @@ function bytes32tostring(bytes32) {
     }
 }
 
-function printEvent(err, evt) {
-  if (err)
-  {
-    console.log('Error', err);
-  }
-  else
-    console.log('Event', evt.returnValues);
-}
+var Web3 = require('web3');
+var net =  require('net');
 
 
-async function compileAndDeployContracts(name)
-{
-  console.log('Compiling...');
-  let contracts = await compileContracts(name);
-  console.log('Deploying...');
-  let contract = await deploy(contracts[name]['HelloWorld'], 2000000);
-  console.log('HelloWorld contract at', contract.options.address);
-  contract.events.Print(printEvent);
-  let p1 = new Promise((resolve,reject) =>
-    contract.methods.SayHello().send({from: from, gas: 2000000},callbackForPromise(resolve,reject)));
-  let tx = await p1;
-  console.log(JSON.stringify(tx));
-  let mtx = await getMinedTransaction(tx);
-  console.log(mtx);
-
-}
-
-let Web3 = require('web3');
-let net =  require('net');
+var web3 = new Web3("\\\\.\\pipe\\geth.ipc",net);
+var from = "0xf68ca8afa54a47de377fa96515568e6ae708a1bb";
+var deploy = deployer(web3, from);
+console.log('Compiling...');
+compileContracts('HelloWorld.sol')
+  .then(function (contracts) {
+        console.log('Deploying...');
+        return deploy(contracts['HelloWorld.sol']['HelloWorld'], 2000000);
+   })
+      .then(function (contract) {
+        function printEvent(err, evt) {
+          if (err)
+          {
+            console.log('Error', err);
+          }
+          else {
 
 
-let web3 = new Web3("\\\\.\\pipe\\geth.ipc",net);
-let from = "0xf68ca8afa54a47de377fa96515568e6ae708a1bb";
-let prom = compileAndDeployContracts('HelloWorld.sol');
-prom.then(() => process.exit(0)).catch(() => process.exit(1));
+          console.log('Event', evt.returnValues);
+        }
+        }
+        console.log('HelloWorld contract at', contract.options.address);
+        contract.events.Print(printEvent);
+        let p1 = new Promise(function(resolve,reject){
+          contract.methods.SayHello().send({from: from, gas: 2000000},function(err,data){
+            if (err)
+              reject(err);
+            else {
+              resolve(data);
+            }
+          });
+        });
+
+        return p1;
+    })
+    .then(function (tx) {
+        console.log(JSON.stringify(tx));
+        getMinedTransaction(tx).then(function(tx)
+      {
+        console.log(tx);
+      })
+    })
+
+    .catch(function (err) {
+        console.error(err);
+        process.exit(1);
+    });
