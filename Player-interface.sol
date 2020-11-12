@@ -1,4 +1,4 @@
-pragma solidity ^0.5.0;
-contract Player {
-	function fizzbuzz(uint n) public pure returns (bytes32 answer);
+pragma solidity ^0.6.0;
+abstract contract Player {
+	function fizzbuzz(uint n) public pure virtual returns (bytes32 answer);
 }

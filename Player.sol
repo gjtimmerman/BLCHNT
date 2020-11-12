@@ -1,10 +1,10 @@
-pragma solidity ^0.5.0;
-contract Player {
-	function fizzbuzz(uint n) public pure returns (bytes32 answer);
+pragma solidity ^0.6.0;
+abstract contract Player {
+	function fizzbuzz(uint n) public pure virtual returns (bytes32 answer);
 }
 
 contract AlwaysFizz is Player {
-	function fizzbuzz(uint n) public pure returns (bytes32 answer) {
+	function fizzbuzz(uint n) public pure override returns (bytes32 answer) {
 		answer = "Fizz";
 	}
 }
@@ -19,7 +19,7 @@ contract CorrectFizzBuzz is Player {
         }
     }
 
-	function fizzbuzz(uint n) public pure returns (bytes32 answer) {
+	function fizzbuzz(uint n) public pure override returns (bytes32 answer) {
 		if (n % 15 == 0) {
 			answer = "Fizz Buzz";
 		} else if (n % 3 == 0) {
@@ -104,3 +104,4 @@ contract Game is CorrectFizzBuzz {
 	}
 
 }
+

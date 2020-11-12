@@ -1,4 +1,4 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.6.0;
 contract Ballot {
 
     struct Voter {
@@ -8,6 +8,7 @@ contract Ballot {
         address delegate;
     }
     struct Proposal {
+        bytes32 name;
         uint voteCount;
     }
 
@@ -16,10 +17,13 @@ contract Ballot {
     Proposal[] proposals;
 
     /// Create a new ballot with $(_numProposals) different proposals.
-    constructor(uint8 _numProposals) public {
+    constructor(bytes32 [] memory proposalNames) public {
         chairperson = msg.sender;
         voters[chairperson].weight = 1;
-        proposals.length = _numProposals;
+        for(uint i = 0; i < proposalNames.length; i++ )
+        {
+            proposals.push(Proposal({name: proposalNames[i], voteCount: 0}));
+        }
     }
 
     /// Give $(voter) the right to vote on this ballot.
@@ -62,4 +66,10 @@ contract Ballot {
                 _winningProposal = proposal;
             }
     }
+    function winnerName() public view
+            returns (bytes32 winnerName_)
+    {
+        winnerName_ = proposals[winningProposal()].name;
+    }
+
 }

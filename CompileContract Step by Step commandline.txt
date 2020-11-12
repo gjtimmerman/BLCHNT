@@ -1,0 +1,18 @@
+
+// eerst handmatig compileren met: solc --combined-json abi,bin HelloWorld.sol > HelloWorld.js
+// daarna handmatig JavaScript toevoegen: HW=...
+//	toevoegen: HWabi=JSON.parse(HW.contracts['HelloWorld.sol:HelloWorld'].abi);
+//	toevoegen: HWbin='0x' + HW.contracts['HelloWorld.sol:HelloWorld'].bin
+loadScript("HelloWorld.js")
+HWcontract=eth.contract(HWabi)
+HWInstance=HWcontract.new({from: eth.accounts[0], data: HWbin, gas: 2000000})
+// daarna minen
+HWInstance.SayHello.sendTransaction({from: eth.accounts[0], gas: 2000000})
+
+// contract creeeren op een specifiek adres:
+
+HWInstance=HWcontract.at(address)
+
+// ethers versturen naar een adres
+
+eth.sendTransaction({from: address, to: address, value: bedrag, gas: 100000})

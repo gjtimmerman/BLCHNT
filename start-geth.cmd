@@ -1,1 +1,1 @@
-geth --rpc --rpcport 8080 --rpccorsdomain "*" --port 30303 --rpcapi "db,eth,net,web3" --gasprice 1000 --networkid 25088 console
+geth --http --http.port 8080 --http.corsdomain "*" --port 30303 --http.api "admin,eth,net,web3,personal" --miner.gasprice 1000 --allow-insecure-unlock --unlock "0xf68ca8afa54a47de377fa96515568e6ae708a1bb" --networkid 25088 console
