@@ -1,0 +1,1 @@
+geth --rpc --rpcport 8080 --rpccorsdomain "*" --port 30303 --rpcapi "db,eth,net,web3" --gasprice 1000 --networkid 25088 console
